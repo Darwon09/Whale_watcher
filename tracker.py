@@ -1,16 +1,3 @@
-"""
-Polymarket Sports Whale Tracker — Live Dashboard
-==================================================
-Runs a local web server with a live-updating dashboard
-that shows whale sports bets as they happen.
-
-Setup:
-  pip install requests flask python-dotenv
-  python sports_dashboard.py
-
-Then open http://localhost:5000 in your browser.
-"""
-
 import os
 import time
 import json
@@ -242,12 +229,6 @@ def tracker_loop():
                         continue
 
                     sport_info = sports_markets.get(cond_id, {})
-                    sport_emojis = {
-                        "NBA": "🏀", "NFL": "🏈", "MLB": "⚾", "NHL": "🏒",
-                        "Soccer": "⚽", "UFC": "🥊", "MMA": "🥊", "Tennis": "🎾",
-                        "F1": "🏎️", "Golf": "⛳",
-                    }
-
                     alert = {
                         "trader": name,
                         "wallet": wallet,
@@ -255,7 +236,6 @@ def tracker_loop():
                         "outcome": trade.get("outcome", "???"),
                         "title": sport_info.get("title", trade.get("title", "Unknown")),
                         "sport": sport_info.get("sport", "Sports"),
-                        "sportEmoji": sport_emojis.get(sport_info.get("sport", ""), "🏆"),
                         "size": round(usdc_size, 2),
                         "price": round(trade.get("price", 0), 4),
                         "eventSlug": sport_info.get("eventSlug", ""),
@@ -283,331 +263,256 @@ DASHBOARD_HTML = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Polymarket Sports Whale Tracker</title>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Polymarket Whale Tracker</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
-            --bg: #0a0a0f;
-            --surface: #12121a;
-            --surface-2: #1a1a25;
-            --border: #2a2a3a;
-            --text: #e8e8f0;
-            --text-dim: #7a7a8e;
-            --green: #00e676;
-            --green-dim: rgba(0, 230, 118, 0.1);
-            --red: #ff5252;
-            --red-dim: rgba(255, 82, 82, 0.1);
-            --accent: #7c4dff;
-            --accent-dim: rgba(124, 77, 255, 0.1);
-            --gold: #ffd740;
+            --bg: #111;
+            --surface: #1a1a1a;
+            --border: #2a2a2a;
+            --border-hover: #444;
+            --text: #ddd;
+            --text-dim: #666;
+            --text-muted: #444;
+            --green: #3d9970;
+            --red: #c0392b;
+            --mono: 'Courier New', Courier, monospace;
         }
 
         body {
             background: var(--bg);
             color: var(--text);
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 14px;
             min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        /* Background grid effect */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-image:
-                linear-gradient(rgba(124, 77, 255, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(124, 77, 255, 0.03) 1px, transparent 1px);
-            background-size: 60px 60px;
-            pointer-events: none;
-            z-index: 0;
         }
 
         .container {
-            max-width: 900px;
+            max-width: 860px;
             margin: 0 auto;
-            padding: 40px 20px;
-            position: relative;
-            z-index: 1;
+            padding: 32px 20px;
         }
 
-        /* Header */
         .header {
-            text-align: center;
-            margin-bottom: 40px;
+            margin-bottom: 28px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 20px;
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
         }
 
         .header h1 {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 1.6rem;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-            margin-bottom: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text);
+            letter-spacing: 0.01em;
         }
-
-        .header h1 .whale { color: var(--accent); }
 
         .header p {
             color: var(--text-dim);
-            font-size: 0.85rem;
-            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
         }
 
-        /* Status bar */
         .status-bar {
             display: flex;
-            gap: 12px;
-            justify-content: center;
+            gap: 20px;
             flex-wrap: wrap;
-            margin-bottom: 32px;
+            margin-bottom: 24px;
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--text-dim);
         }
 
-        .status-chip {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 8px 16px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-            color: var(--text-dim);
+        .status-item {
             display: flex;
             align-items: center;
             gap: 6px;
         }
 
-        .status-chip .dot {
-            width: 6px;
-            height: 6px;
+        .status-item .dot {
+            width: 5px;
+            height: 5px;
             border-radius: 50%;
             background: var(--green);
-            animation: pulse 2s ease-in-out infinite;
+            animation: pulse 2.5s ease-in-out infinite;
         }
 
         @keyframes pulse {
             0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
+            50% { opacity: 0.25; }
         }
 
-        .status-chip .value {
+        .status-item .val {
             color: var(--text);
-            font-weight: 600;
         }
 
-        /* Trade feed */
-        .feed-header {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.8rem;
-            color: var(--text-dim);
+        .feed-label {
+            font-family: var(--mono);
+            font-size: 10px;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 16px;
-            padding-left: 4px;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 10px;
         }
 
         .feed {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 4px;
         }
 
         .trade-card {
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 16px 20px;
+            border-left: 2px solid transparent;
+            padding: 12px 16px;
             display: grid;
-            grid-template-columns: auto 1fr auto;
-            gap: 16px;
+            grid-template-columns: 52px 1fr auto;
+            gap: 14px;
             align-items: center;
-            transition: all 0.3s ease;
-            animation: slideIn 0.4s ease-out;
-            cursor: pointer;
             text-decoration: none;
             color: inherit;
+            transition: border-color 0.15s;
+            animation: fadeSlide 0.25s ease-out;
         }
 
         .trade-card:hover {
-            border-color: var(--accent);
-            background: var(--surface-2);
-            transform: translateY(-1px);
+            border-color: var(--border-hover);
         }
 
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        @keyframes fadeSlide {
+            from { opacity: 0; transform: translateY(-8px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
 
-        .trade-card.buy { border-left: 3px solid var(--green); }
-        .trade-card.sell { border-left: 3px solid var(--red); }
+        .trade-card.buy  { border-left-color: var(--green); }
+        .trade-card.sell { border-left-color: var(--red); }
 
-        .trade-sport {
-            font-size: 1.8rem;
-            line-height: 1;
-        }
-
-        .trade-info {
-            min-width: 0;
-        }
-
-        .trade-market {
+        .sport-tag {
+            font-family: var(--mono);
+            font-size: 10px;
             font-weight: 600;
-            font-size: 0.9rem;
-            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-dim);
+            background: var(--bg);
+            border: 1px solid var(--border);
+            padding: 3px 6px;
+            text-align: center;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
+        .trade-info { min-width: 0; }
+
+        .trade-market {
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text);
+        }
+
         .trade-meta {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.72rem;
+            font-family: var(--mono);
+            font-size: 11px;
             color: var(--text-dim);
             display: flex;
-            gap: 12px;
+            gap: 10px;
             flex-wrap: wrap;
         }
 
-        .trade-meta .trader { color: var(--accent); }
-        .trade-meta .side-buy { color: var(--green); font-weight: 600; }
-        .trade-meta .side-sell { color: var(--red); font-weight: 600; }
+        .trade-meta .trader { color: #888; }
+        .trade-meta .side-buy  { color: var(--green); }
+        .trade-meta .side-sell { color: var(--red); }
 
-        .trade-size {
+        .trade-right {
             text-align: right;
             white-space: nowrap;
         }
 
-        .trade-size .amount {
-            font-family: 'JetBrains Mono', monospace;
-            font-weight: 700;
-            font-size: 1rem;
+        .trade-right .amount {
+            font-family: var(--mono);
+            font-weight: 600;
+            font-size: 13px;
         }
 
-        .trade-size .amount.buy { color: var(--green); }
-        .trade-size .amount.sell { color: var(--red); }
+        .trade-right .amount.buy  { color: var(--green); }
+        .trade-right .amount.sell { color: var(--red); }
 
-        .trade-size .price {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.7rem;
-            color: var(--text-dim);
-        }
-
-        .trade-size .time {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.65rem;
+        .trade-right .price,
+        .trade-right .time {
+            font-family: var(--mono);
+            font-size: 10px;
             color: var(--text-dim);
             margin-top: 2px;
         }
 
-        /* Empty state */
         .empty-state {
+            padding: 60px 20px;
             text-align: center;
-            padding: 80px 20px;
-            color: var(--text-dim);
+            color: var(--text-muted);
+            font-family: var(--mono);
+            font-size: 12px;
         }
 
-        .empty-state .icon {
-            font-size: 3rem;
-            margin-bottom: 16px;
-            opacity: 0.5;
-        }
-
-        .empty-state p {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-        }
-
-        .empty-state .sub {
-            font-size: 0.75rem;
-            margin-top: 8px;
-            opacity: 0.6;
-        }
-
-        /* New trade flash */
-        .trade-card.new {
-            animation: flashIn 0.6s ease-out;
-        }
-
-        @keyframes flashIn {
-            0% {
-                opacity: 0;
-                transform: translateY(-30px) scale(0.98);
-                box-shadow: 0 0 30px rgba(124, 77, 255, 0.3);
-            }
-            50% {
-                box-shadow: 0 0 20px rgba(124, 77, 255, 0.2);
-            }
-            100% {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-                box-shadow: none;
-            }
-        }
-
-        /* Sound toggle */
         .sound-toggle {
             position: fixed;
-            top: 16px;
+            top: 14px;
             right: 16px;
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 8px 12px;
+            padding: 5px 10px;
             color: var(--text-dim);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.7rem;
+            font-family: var(--mono);
+            font-size: 10px;
             cursor: pointer;
-            z-index: 10;
-            transition: border-color 0.2s;
+            transition: border-color 0.15s, color 0.15s;
         }
 
-        .sound-toggle:hover { border-color: var(--accent); }
+        .sound-toggle:hover { border-color: var(--border-hover); color: var(--text); }
         .sound-toggle.active { border-color: var(--green); color: var(--green); }
     </style>
 </head>
 <body>
-    <button class="sound-toggle" id="soundToggle" onclick="toggleSound()">🔇 Sound Off</button>
+    <button class="sound-toggle" id="soundToggle" onclick="toggleSound()">Sound: off</button>
 
     <div class="container">
         <div class="header">
-            <h1>🐋 <span class="whale">Polymarket</span> Sports Whale Tracker</h1>
-            <p>real-time whale alerts on sports bets</p>
+            <h1>Polymarket Sports Whale Tracker</h1>
+            <p>real-time large bets on sports markets</p>
         </div>
 
-        <div class="status-bar" id="statusBar">
-            <div class="status-chip">
+        <div class="status-bar">
+            <div class="status-item">
                 <span class="dot"></span>
-                <span>Live</span>
+                <span>live</span>
             </div>
-            <div class="status-chip">
-                Whales: <span class="value" id="whaleCount">...</span>
+            <div class="status-item">
+                whales: <span class="val" id="whaleCount">--</span>
             </div>
-            <div class="status-chip">
-                Markets: <span class="value" id="marketCount">...</span>
+            <div class="status-item">
+                markets: <span class="val" id="marketCount">--</span>
             </div>
-            <div class="status-chip">
-                Alerts: <span class="value" id="alertCount">0</span>
+            <div class="status-item">
+                alerts: <span class="val" id="alertCount">0</span>
             </div>
-            <div class="status-chip">
-                Last poll: <span class="value" id="lastPoll">...</span>
+            <div class="status-item">
+                polled: <span class="val" id="lastPoll">--</span>
             </div>
         </div>
 
-        <div class="feed-header">Live Feed</div>
+        <div class="feed-label">Feed</div>
 
         <div class="feed" id="feed">
-            <div class="empty-state" id="emptyState">
-                <div class="icon">🎯</div>
-                <p>Watching for whale sports bets...</p>
-                <p class="sub">New trades will appear here in real-time</p>
-            </div>
+            <div class="empty-state" id="emptyState">Waiting for trades...</div>
         </div>
     </div>
 
@@ -618,7 +523,7 @@ DASHBOARD_HTML = """
         function toggleSound() {
             soundEnabled = !soundEnabled;
             const btn = document.getElementById('soundToggle');
-            btn.textContent = soundEnabled ? '🔊 Sound On' : '🔇 Sound Off';
+            btn.textContent = soundEnabled ? 'Sound: on' : 'Sound: off';
             btn.classList.toggle('active', soundEnabled);
         }
 
@@ -656,17 +561,18 @@ DASHBOARD_HTML = """
             card.rel = 'noopener';
             card.className = `trade-card ${side}${isNew ? ' new' : ''}`;
 
+            const sportAbbr = (trade.sport || 'SPT').slice(0, 6).toUpperCase();
+
             card.innerHTML = `
-                <div class="trade-sport">${trade.sportEmoji}</div>
+                <div class="sport-tag">${sportAbbr}</div>
                 <div class="trade-info">
                     <div class="trade-market">${trade.title}</div>
                     <div class="trade-meta">
                         <span class="trader">${trade.trader}</span>
                         <span class="side-${side}">${trade.side} ${trade.outcome}</span>
-                        <span>${trade.sport}</span>
                     </div>
                 </div>
-                <div class="trade-size">
+                <div class="trade-right">
                     <div class="amount ${side}">$${trade.size.toLocaleString()}</div>
                     <div class="price">@ ${trade.price}</div>
                     <div class="time">${formatTime(trade.timestamp)}</div>
@@ -684,7 +590,6 @@ DASHBOARD_HTML = """
             const card = createTradeCard(trade, true);
             feed.insertBefore(card, feed.firstChild);
 
-            // Cap at 50
             while (feed.children.length > 50) {
                 feed.removeChild(feed.lastChild);
             }
@@ -696,13 +601,11 @@ DASHBOARD_HTML = """
             playAlert();
         }
 
-        // SSE connection
         function connect() {
             const evtSource = new EventSource('/stream');
 
             evtSource.addEventListener('trade', function(e) {
-                const trade = JSON.parse(e.data);
-                addTrade(trade);
+                addTrade(JSON.parse(e.data));
             });
 
             evtSource.addEventListener('status', function(e) {
@@ -718,7 +621,6 @@ DASHBOARD_HTML = """
             };
         }
 
-        // Load existing trades on page load
         fetch('/api/trades')
             .then(r => r.json())
             .then(data => {
@@ -784,5 +686,4 @@ if __name__ == "__main__":
     tracker_thread = threading.Thread(target=tracker_loop, daemon=True)
     tracker_thread.start()
 
-    print("\n[*] Dashboard running at http://localhost:5000\n")
     app.run(host="0.0.0.0", port=8000, debug=False, threaded=True)
